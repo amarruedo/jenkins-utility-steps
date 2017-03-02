@@ -2,7 +2,7 @@
 
 ## Docker
 
-* `dockerParams` - Get uid, gid, docker gid ... to build a custom container on. Both `dockerConfigPath` and `attachSocket` are optional, being default values `${workspace}/.docker` and `false` respectively.
+* `dockerParams` - Get uid, gid, docker gid ... to build a custom container on. Both `dockerConfigPath` and `attachSocket` are optional, being default values `${workspace}/.docker` and `false` respectively. It only works on Unix nodes.
 
 ```
 node {
@@ -48,7 +48,7 @@ node {
 }
 ```
 
-* `deleteWorkspace` - Delete all folders related to the build job, including `${workspace}`,`${workspace}@script`,`${workspace}@tmp`, 
+* `deleteWorkspace` - Delete all folders related to the build job, including `${workspace}`, `${workspace}@script` and `${workspace}@tmp`
 
 ```
 node {
@@ -103,7 +103,7 @@ Tag is based on [semantic versioning](http://semver.org/) and must follow the fo
 
 ## Vault
 
-* `secret` - Get a Vault secret. Returns a map with secret key/value pairs.
+* `secret` - Get a Vault secret. Returns a map with secret key/value pairs. `vaultAddress` is optional parameter to specify vault REST API endpoint address and port, default value is `vault.default.svc.cluster.local:8200`. HTTPS is not suported.
 
 ```
 node {
