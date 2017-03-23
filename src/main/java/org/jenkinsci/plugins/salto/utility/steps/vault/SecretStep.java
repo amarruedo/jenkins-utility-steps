@@ -84,13 +84,11 @@ public class SecretStep extends Step {
         @Override protected Map<String, Object> run() throws Exception {
 
             VaultUtils v = new VaultUtils(getContext().get(TaskListener.class), step.vaultAddress);
-            if(v.Authenticate(step.username,step.password)) {
+
+            if(v.Authenticate(step.username,step.password))
                 return v.GetSecrets(step.secretName);
-            }
             else
-            {
                 throw new AbortException("Fail: Vault authentication failed ");
-            }
         }
 
         private static final long serialVersionUID = 1L;

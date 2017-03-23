@@ -18,13 +18,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Created by amarruedo on 28/02/17.
- */
 public class DockerParamsStep extends Step {
 
     private boolean attachSocket = false;
     private String dockerConfigPath = "";
+    private String dns = "192.168.0.100";
+    private String dnsSearch = "saltosystems.com";
+    private final String ANDROID_SDK_GID = "1234";
 
     @DataBoundConstructor
     public DockerParamsStep(){ }
@@ -34,6 +34,12 @@ public class DockerParamsStep extends Step {
 
     @DataBoundSetter
     public void setDockerConfigPath(String dockerConfigPath) { this.dockerConfigPath = dockerConfigPath; }
+
+    @DataBoundSetter
+    public void setDns(String dns) { this.dns = dns; }
+
+    @DataBoundSetter
+    public void setDnsSearch(String dnsSearch)  { this.dnsSearch = dnsSearch; }
 
     @Override
     public StepExecution start(StepContext stepContext) throws Exception {
@@ -74,8 +80,6 @@ public class DockerParamsStep extends Step {
         private DockerParamsResponse getArgs(Node node,Launcher launcher, FilePath filePath, TaskListener listener) throws IOException, InterruptedException {
 
             final PrintStream logger = listener.getLogger();
-            boolean win = Functions.isWindows();
-            String buildArgs = "--build-arg UID=%s --build-arg GID=%s --build-arg WORKSPACE=%s --build-arg DOCKER_GID=%s";
 
             DockerParamsResponse response = new DockerParamsResponse();
 
@@ -90,9 +94,8 @@ public class DockerParamsStep extends Step {
 
             logger.println("DOCKER_GID: " + dockergid);
 
-            if(!win) {
-                String dockerConfigPath = (step.dockerConfigPath != "" ? filePath.getRemote() + "/" + step.dockerConfigPath : filePath.getRemote() + "/.docker" );
-                String runArgs = String.format("-e DOCKER_CONFIG=%s", dockerConfigPath);
+            if(!Functions.isWindows()) {
+                // build args
                 ByteArrayOutputStream userId = new ByteArrayOutputStream();
                 launcher.launch().cmds("id", "-u").quiet(true).stdout(userId).start().joinWithTimeout(10, TimeUnit.SECONDS, launcher.getListener());
 
@@ -100,19 +103,26 @@ public class DockerParamsStep extends Step {
                 launcher.launch().cmds("id", "-g").quiet(true).stdout(groupId).start().joinWithTimeout(10, TimeUnit.SECONDS, launcher.getListener());
 
                 final String charsetName = Charset.defaultCharset().name();
-                response.setBuildArgs(String.format(buildArgs, userId.toString(charsetName).trim(), groupId.toString(charsetName).trim(), filePath.getRemote(), dockergid));
+                String buildArgs = "--build-arg UID=%s --build-arg GID=%s --build-arg WORKSPACE=%s";
+                response.setBuildArgs(String.format(buildArgs, userId.toString(charsetName).trim(), groupId.toString(charsetName).trim(), filePath.getRemote()));
 
-                if(step.attachSocket)
-                    response.setRunArgs(String.format("%s -v /var/run/docker.sock:/var/run/docker.sock", runArgs));
+                // run args
+                String dockerConfigPath = (step.dockerConfigPath != "" ? filePath.getRemote() + "/" + step.dockerConfigPath : filePath.getRemote() + "/.docker" );
+                String runArgs = String.format("--dns=%s --dns-search=%s -e DOCKER_CONFIG=%s", step.dns, step.dnsSearch, dockerConfigPath);
+
+                if(step.attachSocket) {
+
+                    if(dockergid!="") runArgs += " --group-add=" + dockergid;
+
+                    response.setRunArgs(runArgs + " -v /var/run/docker.sock:/var/run/docker.sock");
+                }
                 else
-                    response.setRunArgs(runArgs);
+                    response.setRunArgs(runArgs + " --group-add=" + step.ANDROID_SDK_GID);
 
                 return response;
             }
             else
-            {
                 return response;
-            }
         }
 
         private static final long serialVersionUID = 1L;
